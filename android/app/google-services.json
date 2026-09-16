@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "474600304129",
+    "project_id": "pos-app-a61fd",
+    "storage_bucket": "pos-app-a61fd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:474600304129:android:8d8ba75b1f074f2d961a00",
+        "android_client_info": {
+          "package_name": "com.naylinhtet.pos_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADr1Hla3oO1GERWT6sHZkaVigAlU1vLfQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
