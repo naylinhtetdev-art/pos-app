@@ -12,7 +12,20 @@
           "package_name": "com.naylinhtet.pos_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "474600304129-gbhn98grni084qags4is920vf7a54lj7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.naylinhtet.pos_app",
+            "certificate_hash": "9f79fcbadd4e445339db5087a0b6beff6099ad2a"
+          }
+        },
+        {
+          "client_id": "474600304129-c0c61181ereqbnuo89l9vg5vkhq7hr9r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyADr1Hla3oO1GERWT6sHZkaVigAlU1vLfQ"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "474600304129-c0c61181ereqbnuo89l9vg5vkhq7hr9r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "474600304129-qo2f40952ljukd7ln6hmbq99r9l26ask.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.posApp"
+              }
+            }
+          ]
         }
       }
     }
