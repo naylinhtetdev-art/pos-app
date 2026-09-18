@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:pos_app/screens/home/pos_home_screen.dart';
 import 'package:pos_app/screens/trial/trial_expired_screen.dart';
 
 import '../../models/trial_model.dart';
@@ -73,10 +74,16 @@ class _TrialScreenState extends State<TrialScreen> {
     return _twoDigits(_remaining.inSeconds.remainder(60));
   }
 
+  void _openPos() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const PosHomeScreen()),
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
-
     super.dispose();
   }
 
@@ -104,7 +111,7 @@ class _TrialScreenState extends State<TrialScreen> {
               const SizedBox(height: 12),
 
               const Text(
-                'You are currently using the free trial.',
+                'You are currently using the free trial.\n7-Day Free Trial',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
               ),
@@ -140,15 +147,7 @@ class _TrialScreenState extends State<TrialScreen> {
                 width: double.infinity,
                 height: 52,
                 child: FilledButton(
-                  onPressed: () {
-                    // နောက် Phase မှာ
-                    // POS Screen ကိုသွားမယ်
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('POS Screen will be added next.'),
-                      ),
-                    );
-                  },
+                  onPressed: _openPos,
                   child: const Text(
                     'START POS',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

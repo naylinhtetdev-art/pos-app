@@ -1,9 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
+import 'package:pos_app/screens/auth/login_screen.dart';
+import 'package:pos_app/screens/home/pos_home_screen.dart';
+import 'package:pos_app/screens/profile/create_profile_screen.dart';
+import 'package:pos_app/services/license_service.dart';
 import '../../services/device_service.dart';
 import '../../services/trial_service.dart';
-import '../trial/trial_expired_screen.dart';
 import '../trial/trial_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,6 +18,8 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   final DeviceService _deviceService = DeviceService();
   final TrialService _trialService = TrialService();
+  final LicenseService _licenseService = LicenseService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -27,78 +31,116 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
     try {
       await Future.delayed(const Duration(seconds: 2));
-
+      final user = _auth.currentUser;
       // Get installation ID
       final installationId = await _deviceService.getInstallationId();
 
-      debugPrint('Installation ID: $installationId');
-
-      // Get or create trial
+      // Get/Create Trial
       final trial = await _trialService.getOrCreateTrial(installationId);
+      // No Firebase Auth User
+      if (user == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const CreateProfileScreen()),
+        );
 
-      if (!mounted) return;
-
+        return;
+      }
       if (trial.isActive) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => TrialScreen(trial: trial)),
         );
-      } else {
+        return;
+      }
+
+      // Check Firestore Profile
+      // final profileExists = await _profileService.profileExists(user.uid);
+      // if (!mounted) return;
+      // if (!profileExists) {
+      //   Navigator.pushReplacement(
+      //     context,
+      //     MaterialPageRoute(builder: (_) => const CreateProfileScreen()),
+      //   );
+
+      //   return;
+      // }
+      // 7. Profile exists
+      // Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(builder: (_) => const PosHomeScreen()),
+      // );
+
+      // ====================================
+      // CASE 3: User already logged in
+      // Check License + Device
+      // ====================================
+
+      final hasAccess = await _licenseService.checkAndBindLicense(
+        uid: user.uid,
+        installationId: installationId,
+      );
+
+      if (!mounted) return;
+
+      if (hasAccess) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const TrialExpiredScreen()),
+          MaterialPageRoute(builder: (_) => const PosHomeScreen()),
+        );
+      } else {
+        // License invalid / wrong device
+        await _auth.signOut();
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
       }
     } on FirebaseException catch (e) {
       debugPrint('Firebase Error: ${e.code}');
 
-      debugPrint('Firebase Message: ${e.message}');
-
       if (!mounted) return;
 
-      setState(() {
-        _isLoading = false;
-        _errorMessage = _getFirebaseErrorMessage(e);
-      });
+      _showError(e.message ?? 'Unable to connect to Firebase.');
     } catch (e) {
-      debugPrint('Unknown Error: $e');
+      debugPrint('Error: $e');
 
       if (!mounted) return;
-
       setState(() {
         _isLoading = false;
         _errorMessage = 'Something went wrong.\nPlease try again.';
       });
+      _showError(
+        'Something went wrong.\n'
+        'Please try again.',
+      );
     }
   }
 
-  String _getFirebaseErrorMessage(FirebaseException e) {
-    switch (e.code) {
-      case 'unavailable':
-        return 'No internet connection.\n'
-            'Please check your internet connection '
-            'and try again.';
-
-      case 'permission-denied':
-        return 'Firebase permission denied.\n'
-            'Please check your Firestore Security Rules.';
-
-      case 'not-found':
-        return 'Firebase document was not found.';
-
-      default:
-        return 'Firebase Error: ${e.code}\n'
-            '${e.message ?? ''}';
-    }
+  void _showError(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('Something went wrong'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -154,107 +196,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-// import 'package:flutter/material.dart';
-// import 'package:pos_app/screens/trial/trial_expired_screen.dart';
-// import 'package:pos_app/screens/trial/trial_screen.dart';
-
-// import '../../services/device_service.dart';
-// import '../../services/trial_service.dart';
-
-// class SplashScreen extends StatefulWidget {
-//   const SplashScreen({super.key});
-
-//   @override
-//   State<SplashScreen> createState() => _SplashScreenState();
-// }
-
-// class _SplashScreenState extends State<SplashScreen> {
-//   final DeviceService _deviceService = DeviceService();
-
-//   final TrialService _trialService = TrialService();
-
-//   @override
-//   void initState() {
-//     super.initState();
-
-//     _initializeApp();
-//   }
-
-//   Future<void> _initializeApp() async {
-//     try {
-//       // Splash ခဏပြမယ်
-//       await Future.delayed(const Duration(seconds: 2));
-
-//       // Installation ID ရယူ
-//       final installationId = await _deviceService.getInstallationId();
-
-//       // Trial ရယူ / ဖန်တီး
-//       final trial = await _trialService.getOrCreateTrial(installationId);
-
-//       if (!mounted) return;
-
-//       // Trial active ဖြစ်/မဖြစ်
-//       if (trial.isActive) {
-//         Navigator.pushReplacement(
-//           context,
-//           MaterialPageRoute(builder: (_) => TrialScreen(trial: trial)),
-//         );
-//       } else {
-//         Navigator.pushReplacement(
-//           context,
-//           MaterialPageRoute(builder: (_) => const TrialExpiredScreen()),
-//         );
-//       }
-//     } catch (e) {
-//       if (!mounted) return;
-
-//       _showError(e.toString());
-//     }
-//   }
-
-//   void _showError(String message) {
-//     showDialog(
-//       context: context,
-//       barrierDismissible: false,
-//       builder: (_) {
-//         return AlertDialog(
-//           title: const Text('Something went wrong'),
-//           content: Text(message),
-//           actions: [
-//             TextButton(
-//               onPressed: () {
-//                 Navigator.pop(context);
-//               },
-//               child: const Text('OK'),
-//             ),
-//           ],
-//         );
-//       },
-//     );
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return const Scaffold(
-//       body: Center(
-//         child: Column(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             Icon(Icons.point_of_sale, size: 80),
-
-//             SizedBox(height: 20),
-
-//             Text(
-//               'POS APP',
-//               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-//             ),
-
-//             SizedBox(height: 10),
-
-//             CircularProgressIndicator(),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }

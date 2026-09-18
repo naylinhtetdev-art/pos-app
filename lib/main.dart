@@ -1,13 +1,25 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_app/firebase_options.dart';
+import 'package:pos_app/providers/cart_provider.dart';
+import 'package:pos_app/providers/product_provider.dart';
 import 'package:pos_app/screens/splash/splash_screen.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const PosApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
+      child: const PosApp(),
+      //runApp(const PosApp()),
+    ),
+  );
 }
 
 class PosApp extends StatelessWidget {

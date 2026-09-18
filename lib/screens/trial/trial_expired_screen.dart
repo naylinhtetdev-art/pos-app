@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:pos_app/screens/auth/login_screen.dart';
 
 class TrialExpiredScreen extends StatelessWidget {
   const TrialExpiredScreen({super.key});
+
+  void _openLogin(BuildContext context) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,8 +67,8 @@ class TrialExpiredScreen extends StatelessWidget {
                   height: 52,
                   child: FilledButton(
                     onPressed: () {
-                      // Phase 3 မှာ
                       // LoginScreen သွားမယ်
+                      _openLogin(context);
                     },
                     child: const Text(
                       'LOGIN',
