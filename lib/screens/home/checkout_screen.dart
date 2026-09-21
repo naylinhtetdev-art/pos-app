@@ -35,7 +35,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     child: ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: cart.items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final item = cart.items[index];
                         return _cartItem(context, cart, item);

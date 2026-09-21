@@ -148,10 +148,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   prefixIcon: Icon(Icons.attach_money),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'Enter selling price';
-                  if (double.tryParse(value) == null)
+                  }
+                  if (double.tryParse(value) == null) {
                     return 'Enter a valid number';
+                  }
                   return null;
                 },
               ),
@@ -175,10 +177,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   prefixIcon: Icon(Icons.inventory),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'Enter stock quantity';
-                  if (int.tryParse(value) == null)
+                  }
+                  if (int.tryParse(value) == null) {
                     return 'Enter a valid integer';
+                  }
                   return null;
                 },
               ),
