@@ -227,7 +227,7 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+              MaterialPageRoute(builder: (_) => CheckoutScreen()),
             );
           },
           icon: const Icon(Icons.shopping_cart_outlined),
@@ -522,7 +522,7 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.95,
       ),
       itemBuilder: (context, index) {
         final product = products[index];

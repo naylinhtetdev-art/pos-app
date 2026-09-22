@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:pos_app/models/receipt_model.dart';
 import 'package:pos_app/services/sale_service.dart';
 import 'package:provider/provider.dart';
 
@@ -260,6 +261,86 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // COMPLETE SALE
   // =========================
 
+  // Future<void> _completeSale(String paymentMethod) async {
+  //   final user = FirebaseAuth.instance.currentUser;
+
+  //   if (user == null) {
+  //     return;
+  //   }
+
+  //   final cart = context.read<CartProvider>();
+
+  //   if (cart.items.isEmpty) {
+  //     return;
+  //   }
+
+  //   setState(() {
+  //     _isLoading = true;
+  //   });
+
+  //   try {
+  //     final invoiceNo = 'INV-${DateTime.now().millisecondsSinceEpoch}';
+
+  //     final items = cart.items.map((item) {
+  //       return {
+  //         'productId': item.product.id,
+  //         'name': item.product.name,
+  //         'price': item.product.price,
+  //         'quantity': item.quantity,
+  //         'total': item.total,
+  //       };
+  //     }).toList();
+
+  //     final totalAmount = cart.total;
+
+  //     await SaleService().createSale(
+  //       uid: user.uid,
+  //       invoiceNo: invoiceNo,
+  //       subtotal: cart.subtotal,
+  //       discount: cart.discount,
+  //       total: totalAmount,
+  //       paymentMethod: paymentMethod,
+  //       items: items,
+  //     );
+
+  //     cart.clearCart();
+
+  //     if (!mounted) return;
+
+  //     await showDialog(
+  //       context: context,
+  //       builder: (_) {
+  //         return AlertDialog(
+  //           title: const Text('Sale Completed'),
+  //           content: Text(
+  //             'Invoice: $invoiceNo\n'
+  //             'Total: ${totalAmount.toStringAsFixed(0)} MMK',
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () {
+  //                 Navigator.pop(context);
+  //               },
+  //               child: const Text('OK'),
+  //             ),
+  //           ],
+  //         );
+  //       },
+  //     );
+  //   } catch (e) {
+  //     if (!mounted) return;
+
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(SnackBar(content: Text(e.toString())));
+  //   } finally {
+  //     if (mounted) {
+  //       setState(() {
+  //         _isLoading = false;
+  //       });
+  //     }
+  //   }
+  // }
   Future<void> _completeSale(String paymentMethod) async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -278,7 +359,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
 
     try {
+      // =====================================
+      // 1. SAVE CART DATA BEFORE CLEAR
+      // =====================================
+
+      final subtotal = cart.subtotal;
+
+      final discount = cart.discount;
+
+      final totalAmount = cart.total;
+
+      // =====================================
+      // 2. CREATE INVOICE NUMBER
+      // =====================================
+
       final invoiceNo = 'INV-${DateTime.now().millisecondsSinceEpoch}';
+
+      // =====================================
+      // 3. CREATE SALE ITEMS
+      // =====================================
 
       final items = cart.items.map((item) {
         return {
@@ -290,48 +389,78 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         };
       }).toList();
 
-      final totalAmount = cart.total;
+      // =====================================
+      // 4. CREATE RECEIPT ITEMS
+      // =====================================
+
+      final receiptItems = cart.items.map((item) {
+        return ReceiptItem(
+          name: item.product.name,
+          price: item.product.price,
+          quantity: item.quantity,
+        );
+      }).toList();
+
+      // =====================================
+      // 5. SAVE SALE + REDUCE STOCK
+      // =====================================
 
       await SaleService().createSale(
         uid: user.uid,
         invoiceNo: invoiceNo,
-        subtotal: cart.subtotal,
-        discount: cart.discount,
+        subtotal: subtotal,
+        discount: discount,
         total: totalAmount,
         paymentMethod: paymentMethod,
         items: items,
       );
 
+      // =====================================
+      // 6. CREATE RECEIPT MODEL
+      // =====================================
+
+      final receipt = ReceiptModel(
+        shopName: 'Shop Name',
+        invoiceNo: invoiceNo,
+        date: DateTime.now(),
+        items: receiptItems,
+        subtotal: subtotal,
+        discount: discount,
+        total: totalAmount,
+        paymentMethod: paymentMethod,
+      );
+
+      // =====================================
+      // 7. CLEAR CART
+      // =====================================
+
       cart.clearCart();
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
-      await showDialog(
-        context: context,
-        builder: (_) {
-          return AlertDialog(
-            title: const Text('Sale Completed'),
-            content: Text(
-              'Invoice: $invoiceNo\n'
-              'Total: ${totalAmount.toStringAsFixed(0)} MMK',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      // =====================================
+      // 8. STOP LOADING
+      // =====================================
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      // =====================================
+      // 9. SHOW RECEIPT PREVIEW
+      // =====================================
+
+      _showReceiptPreview(context, receipt);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ).showSnackBar(SnackBar(content: Text('Sale failed: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -339,5 +468,298 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         });
       }
     }
+  }
+
+  void _showReceiptPreview(BuildContext context, ReceiptModel receipt) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 700),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // =========================
+                  // HEADER
+                  // =========================
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Receipt Preview',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // =========================
+                  // RECEIPT
+                  // =========================
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // SHOP NAME
+                            Text(
+                              receipt.shopName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            const Text(
+                              'Thank you for shopping with us',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            const Divider(),
+
+                            // INVOICE
+                            Text('Invoice: ${receipt.invoiceNo}'),
+
+                            const SizedBox(height: 4),
+
+                            Text('Date: ${_formatDate(receipt.date)}'),
+
+                            const Divider(),
+
+                            const SizedBox(height: 5),
+
+                            // ITEM HEADER
+                            Row(
+                              children: const [
+                                Expanded(
+                                  child: Text(
+                                    'Item',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(
+                                  width: 95,
+                                  child: Text(
+                                    'Qty × Price',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(
+                                  width: 65,
+                                  child: Text(
+                                    'Total',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // ITEMS
+                            ...receipt.items.map((item) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 5,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(child: Text(item.name)),
+
+                                    SizedBox(
+                                      width: 95,
+                                      child: Text(
+                                        '${item.quantity} × '
+                                        '${item.price.toStringAsFixed(0)}',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+
+                                    SizedBox(
+                                      width: 65,
+                                      child: Text(
+                                        item.total.toStringAsFixed(0),
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+
+                            const Divider(),
+
+                            // SUBTOTAL
+                            _receiptSummaryRow('Subtotal', receipt.subtotal),
+
+                            // DISCOUNT
+                            _receiptSummaryRow('Discount', receipt.discount),
+
+                            const Divider(),
+
+                            // TOTAL
+                            _receiptSummaryRow(
+                              'TOTAL',
+                              receipt.total,
+                              isTotal: true,
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // PAYMENT
+                            Text(
+                              'Payment: ${receipt.paymentMethod}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+
+                            const SizedBox(height: 18),
+
+                            const Text(
+                              'Thank You!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // =========================
+                  // PRINT
+                  // =========================
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // Printer will be added here
+                      },
+                      icon: const Icon(Icons.print),
+                      label: const Text('Print Receipt'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // =========================
+                  // CLOSE
+                  // =========================
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Close'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _receiptSummaryRow(
+    String title,
+    double value, {
+    bool isTotal = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: isTotal ? 18 : 14,
+                fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+
+          Text(
+            '${value.toStringAsFixed(0)} MMK',
+            style: TextStyle(
+              fontSize: isTotal ? 18 : 14,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+
+    final month = date.month.toString().padLeft(2, '0');
+
+    final year = date.year.toString();
+
+    final hour = date.hour.toString().padLeft(2, '0');
+
+    final minute = date.minute.toString().padLeft(2, '0');
+
+    return '$day/$month/$year $hour:$minute';
   }
 }
